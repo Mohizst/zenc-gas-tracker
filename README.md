@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ZenChain Testnet — Gas Fee Tracker</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 24px; direction: rtl; }
+    .card { max-width:720px; margin:auto; padding:20px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+    h1 { margin:0 0 8px 0; font-size:20px; }
+    p { margin:6px 0; }
+    .value { font-weight:700; font-size:28px; }
+    .meta { color:#555; font-size:13px; }
+    .small { font-size:13px; color:#666; }
+    .error { color:#b00020; }
+    footer { margin-top:18px; font-size:13px; color:#666; text-align:center; }
+    button { padding:8px 12px; border-radius:8px; border:0; background:#111827; color:white; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>⛽ ZenChain Testnet — Gas Fee Tracker</h1>
+    <p class="small">این صفحه مقدار gas price شبکه ZenChain Testnet را از RPC عمومی می‌خواند (eth_gasPrice).</p>
+
+    <p>Current gas price: <span id="gasPrice" class="value">در حال بارگذاری...</span></p>
+    <p class="meta">Raw (wei hex): <span id="raw">—</span></p>
+    <p class="meta">Last update: <span id="updated">—</span></p>
+
+    <div style="margin-top:12px;">
+      <button id="refreshBtn">تازه‌سازی دستی</button>
+      <span style="margin-inline-start:12px;" class="small">اتوماتیک هر 15 ثانیه</span>
+    </div>
+
+    <p id="err" class="error" style="display:none"></p>
+
+    <footer>
+      برای استفاده در ZenChain Builder: این مخزن شامل یک صفحهٔ استاتیک است که می‌توان روی GitHub Pages یا Vercel دیپلوی کرد.
+    </footer>
+  </div>
+
+<script>
+const rpcUrl = "https://zenchain-testnet.api.onfinality.io/public";
+
+async function fetchGasPrice() {
+  const errEl = document.getElementById('err');
+  errEl.style.display = 'none';
+  try {
+    const body = {
+      jsonrpc: "2.0",
+      method: "eth_gasPrice",
+      params: [],
+      id: 1
+    };
+    const res = await fetch(rpcUrl, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.result) throw new Error("No result in RPC response");
+    const gasWeiHex = data.result; // hex string like "0x09184e72a000"
+    const gasWei = parseInt(gasWeiHex, 16);
+    const gasGwei = gasWei / 1e9;
+    document.getElementById('gasPrice').textContent = gasGwei.toFixed(3) + " Gwei";
+    document.getElementById('raw').textContent = gasWeiHex;
+    document.getElementById('updated').textContent = new Date().toLocaleString('fa-IR');
+  } catch (e) {
+    const msg = "خطا در دریافت داده: " + (e.message || e);
+    const errEl = document.getElementById('err');
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    document.getElementById('gasPrice').textContent = "—";
+    document.getElementById('raw').textContent = "—";
+    document.getElementById('updated').textContent = "—";
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', fetchGasPrice);
+
+// initial + interval
+fetchGasPrice();
+setInterval(fetchGasPrice, 15000);
+</script>
+</body>
+</html>
